@@ -8,6 +8,8 @@ class Proxy extends Owned {
   forward(className, methodName, data) {
     this.onlyOwner();
 
+    setSender(this.address);// Set sender as Proxy
+
     Assert(this.executeCall(className, methodName, data));
   }
 
