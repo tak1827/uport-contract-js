@@ -119,10 +119,10 @@ user.run(function() {
  6. Verify JWT by a third party
  */
 
-// Decode token, then retrive payload
+// Decode token, then retrieve payload
 const decodedPayload = JSON.parse( decodeBase64(token.split(".")[1]) );
 
-// Get ipfs hash from UportRegistry
+// Get IPFS hash from UportRegistry
 const ipfsHash = UR.get(
   decodedPayload.attribute.identifier,
   decodedPayload.iss,
@@ -132,10 +132,10 @@ const ipfsHash = UR.get(
 // Get attestation from IPFS
 const ipfsAtt = IS.cat(ipfsHash);
 
-// Retrive compressed public key form attestation
+// Retrieve compressed public key form attestation
 const compressedPubkey = JSON.parse(ipfsAtt).publicKey;
 
-// Retrive public key
+// Retrieve public key
 const ipfsPubkey = getPubkeyFromCompressedPubkey(compressedPubkey);
 
 // Verify token using public key which is hosted by IPFS
