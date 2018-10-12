@@ -21,8 +21,8 @@ class IPFS {
       : this.hashes[hash];
   }
 }
-/*
-Attestation format is as follow
+
+/* === Attestation format ===
 {
   token: JWT,
   data: {
@@ -34,7 +34,7 @@ Attestation format is as follow
     signature: Signature
   },
   encrypted: false,
-  publicKey: Publickey corresponding to signature
+  publicKey: Public key corresponding to signature
 }
 */
 function buildAttestation(token, publicKey) {

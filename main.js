@@ -3,7 +3,7 @@ const IdentityManager = require('./contracts/IdentityManager');
 const UportRegistry = require('./contracts/UportRegistry');
 const { IPFS, buildAttestation, decodeBase64 } = require('./IPFS');
 const { generatePrivateKey, getPubkey, getCompressedPubkey, getPubkeyFromCompressedPubkey,
-  sign, verify, buildPayload } = require('./JsonWebToken');
+  sign, verify, buildPayload } = require('./JWT');
 const User = require('./User');
 
 
@@ -33,7 +33,7 @@ global.setSender = function (sender) {
 }
 
 // Deploy contracts
-global.IM = new IdentityManager(10,10,10);
+global.IM = new IdentityManager(10);
 global.UR = new UportRegistry();
 
 // Pseudo IPFS
@@ -41,39 +41,67 @@ global.IS = new IPFS();
 
 
 /********************************
-  Run contract
+ Execute contracts
 *********************************/
 
-// Create user
+/* 
+ 1. Create user object.
+ */
+
+// User object hold proxy object and jwt private key
 let user = new User("Christian Lundkvist");
 
-// Create Identity, then assign to user
+
+/*
+ 2. Create Proxy as identity
+ */
 user.run(function() {
-  user.recoveryKey = 'recoveryKey for Christian Lundkvist';
-  this.proxy = IM.createIdentity(this.address, user.recoveryKey);
+
+  // Proxy contract is deployed by IdentityManager
+  this.proxy = IM.createIdentity(this.address);
 });
 
-// Build payload for JWT
+
+/*
+ 3. Generate JWT 
+ */
+
+// Define unique subject
 user.subjects.push('First-JWT');
+
 const payload = buildPayload(
   { name: user.name, identifier: IM.address }, 
   user.subjects[0], 
   user.proxy.address,
 );
 
-// Generate JWT
-user.ipfsKey = generatePrivateKey();
-const token = sign(payload, user.ipfsKey);
+// Generate private key to sign JWT
+user.jwtKey = generatePrivateKey();
 
-// Build Attestation
-const pubkey = getCompressedPubkey(user.ipfsKey);
+const token = sign(payload, user.jwtKey);
+
+
+/*
+ 4. Add attestation to IPFS
+ */
+
+// Include pubkey to assertion for signature verification
+const pubkey = getCompressedPubkey(user.jwtKey);
+
+// Build attestation. 
 const attestation = buildAttestation(token, pubkey);
 
 // Add to IPFS
 const hash = IS.add( JSON.stringify(attestation) );
  
-// Set jwt to UportRegistry contract
+
+/*
+ 5. Register IPFS hash to UportRegistry contract
+ */
 user.run(function() {
+
+  // IdentityManager delegate registration to Proxy
+  // Proxy register hash to UportRegistry
   IM.forwardTo(
     this.proxy, 
     'UportRegistry',
@@ -86,26 +114,36 @@ user.run(function() {
   );
 });
 
-console.log({
-  User: JSON.stringify(user),
-  IM: JSON.stringify(IM),
-  UR: JSON.stringify(UR),
-  IS: JSON.stringify(IS),
-})
 
+/*
+ 6. Verify JWT by a third party
+ */
+
+// Decode token, then retrive payload
 const decodedPayload = JSON.parse( decodeBase64(token.split(".")[1]) );
+
+// Get ipfs hash from UportRegistry
 const ipfsHash = UR.get(
   decodedPayload.attribute.identifier,
   decodedPayload.iss,
   decodedPayload.sub
 );
 
-const ipfsAss = IS.cat(ipfsHash);
+// Get attestation from IPFS
+const ipfsAtt = IS.cat(ipfsHash);
 
-const compressedPubkey = JSON.parse(ipfsAss).publicKey;
+// Retrive compressed public key form attestation
+const compressedPubkey = JSON.parse(ipfsAtt).publicKey;
 
-const pubkey2 = getPubkeyFromCompressedPubkey(compressedPubkey);
+// Retrive public key
+const ipfsPubkey = getPubkeyFromCompressedPubkey(compressedPubkey);
 
+// Verify token using public key which is hosted by IPFS
+verify(token, ipfsPubkey);
 
-verify(token, pubkey2);
-
+console.log({
+  User: JSON.stringify(user),
+  IM: JSON.stringify(IM),
+  UR: JSON.stringify(UR),
+  IS: JSON.stringify(IS),
+})

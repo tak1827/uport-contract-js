@@ -32,7 +32,7 @@ function verify(token, publicKey) {
 	);
 }
 
-/* Payload Format is as follow
+/* === Payload Format ===
 {
 	attribute: {
 	  name: user name,

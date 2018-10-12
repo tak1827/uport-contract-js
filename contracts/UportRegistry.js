@@ -5,21 +5,21 @@ class UportRegistry {
     assignAddress.call(this); // Assign address property
   }
 
-  set(registrationIdentifier, subject, value){
+set(identifier, subject, value){
 
-    if (typeof this.registry[registrationIdentifier] == "undefined" ) {
-      this.registry[registrationIdentifier] = {};
-    }
-    
-    if (typeof this.registry[registrationIdentifier][msg.sender] == "undefined" ) {
-      this.registry[registrationIdentifier][msg.sender] = {}
-    }
-
-    this.registry[registrationIdentifier][msg.sender][subject] = value;
+  if (typeof this.registry[identifier] === "undefined" ) {
+    this.registry[identifier] = {};
+  }
+  
+  if (typeof this.registry[identifier][msg.sender] === "undefined" ) {
+    this.registry[identifier][msg.sender] = {}
   }
 
-  get(registrationIdentifier, issuer, subject)  {
-    return this.registry[registrationIdentifier][issuer][subject];
+  this.registry[identifier][msg.sender][subject] = value;
+}
+
+  get(identifier, issuer, subject)  {
+    return this.registry[identifier][issuer][subject];
   }
 }
 

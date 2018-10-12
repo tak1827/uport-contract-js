@@ -2,8 +2,7 @@ class User {
   constructor(name) {
     this.name = name;
     this.proxy = null;
-    this.recoveryKey = null;
-    this.ipfsKey = null;
+    this.jwtKey = null;
     this.subjects = [];
     assignAddress.call(this); // Assign address property
   }

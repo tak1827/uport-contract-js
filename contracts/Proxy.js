@@ -5,27 +5,31 @@ class Proxy extends Owned {
 
   constructor() { super(); }
 
-  forward(className, methodName, data) {
-    this.onlyOwner();
+forward(className, functionName, data) {
+  this.onlyOwner();
 
-    setSender(this.address);// Set sender as Proxy
+  setSender(this.address);// Set sender as Proxy
 
-    Assert(this.executeCall(className, methodName, data));
-  }
+  Assert(this.executeCall(className, functionName, data));
+}
 
-  executeCall(className, methodName, data) {
+executeCall(className, functionName, data) {
 
-  	if (className === 'UportRegistry' && methodName === 'set') {
-  		const { identifier, subject, value } = data;
-  		UR.set(identifier, subject, value);
+	if (className === 'UportRegistry' && functionName === 'set') {
+		const { identifier, subject, value } = data;
 
-  	} else if (className === 'UportRegistry' && methodName === 'get') {
-			const { identifier, issur, subject } = data;
-  		UR.get(identifier, issur, subject);
-  	}
+    // Set IPFS hash to UportRegistry
+		UR.set(identifier, subject, value);
 
-  	return true;
-  }
+	} else if (className === 'UportRegistry' && functionName === 'get') {
+		const { identifier, issur, subject } = data;
+
+    // Get IPFS hash from UportRegistry
+		UR.get(identifier, issur, subject);
+	}
+
+	return true;
+}
 }
 
 module.exports = Proxy;
