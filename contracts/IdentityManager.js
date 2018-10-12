@@ -15,18 +15,18 @@ class IdentityManager {
     assignAddress.call(this); // Assign address property
   }
 
-createIdentity(owner) {
-  setSender(this.address);// Set sender as IdentityManager
+  createIdentity(owner) {
+    setSender(this.address);// Set sender as IdentityManager
 
-  // Generate Proxy contract
-  const identity = new Proxy();
+    // Generate Proxy contract
+    const identity = new Proxy();
 
-  this.owners[identity.address] = {
-    [owner]: (new Date()).getTime() - this.timeLock
+    this.owners[identity.address] = {
+      [owner]: (new Date()).getTime() - this.timeLock
+    }
+
+    return identity;
   }
-
-  return identity;
-}
 
   forwardTo(identity, className, methodName, data) {
     this.onlyOwner(identity);
