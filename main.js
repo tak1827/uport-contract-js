@@ -97,26 +97,6 @@ const attestation = buildAttestation(token, pubkey);
 
 // Add to IPFS
 const hash = IS.add( JSON.stringify(attestation) );
- 
-
-/*
- 5. Register IPFS hash to UportRegistry contract
- */
-// user.run(function() {
-
-//   // IdentityManager delegate registration to Proxy
-//   // Proxy register hash to UportRegistry
-//   MIM.forwardTo(
-//     this.proxy, 
-//     'UportRegistry',
-//     'set',
-//     { 
-//       identifier: MIM.address,
-//       subject: user.subjects[0],
-//       value: hash
-//     }
-//   );
-// });
 
 
 /*
@@ -126,12 +106,13 @@ const hash = IS.add( JSON.stringify(attestation) );
 // Generate private key for txRelay 
 user.txRelayKey = randomBytes(32);
 
-// Empty becasue Tx sender is owner.
+// Retrieve pub key and set as claimedSender
+// This is used for signature verification
+const claimedSender = privateToPublic(user.txRelayKey).toString('hex');
+
+// Empty because Tx sender is owner.
 // User can delegate another user as sender.
 const listOwner = '';
-
-// Retreve pub key and set as sender
-const claimedSender = privateToPublic(user.txRelayKey).toString('hex');
 
 // Nonce is for preventing from replay attack.
 const nonce = TR.getNonce(claimedSender);
@@ -141,8 +122,8 @@ const data = {
   claimedSender,
   sender: user.address,
   identity: user.proxy,
-  className: 'ThirdPartyDapp',
-  methodName: 'set',
+  className: 'ThirdPartyDapp', // Contract name called by proxy
+  methodName: 'set', // Function name called by proxy
   data: {
     identifier: MIM.address,
     subject: user.subjects[0],
@@ -150,7 +131,7 @@ const data = {
   }
 };
 
-// Calculate hash
+// Calculate EIP191 format hash
 const eip191Hash = calculateEIP191Hash(
   listOwner, nonce, MIM.address, JSON.stringify(data)
 )
@@ -159,43 +140,19 @@ const sig = ecsign(eip191Hash, user.txRelayKey, 1);
 
 
 /*
- 6. Relay transaction
+ 6. Sned transaction
  */
 user.run(function() {
 
-  // Send tx to relayMetaTx of txRelay contract
+  // User send transaction with no fund
+  // Then, funded by Sensui server.
+
+  // Send transaction to txRelay contract
   TR.relayMetaTx(
     sig.v, sig.r, sig.s, MIM, data, listOwner
-  )
+  );
 });
 
-
-/*
- 6. Verify JWT by a third party
- */
-
-// // Decode token, then retrieve payload
-// const decodedPayload = JSON.parse( decodeBase64(token.split(".")[1]) );
-
-// // Get IPFS hash from UportRegistry
-// const ipfsHash = UR.get(
-//   decodedPayload.attribute.identifier,
-//   decodedPayload.iss,
-//   decodedPayload.sub
-// );
-
-// // Get attestation from IPFS
-// const ipfsAtt = IS.cat(ipfsHash);
-
-// // Retrieve compressed public key form attestation
-// const compressedPubkey = JSON.parse(ipfsAtt).publicKey;
-
-// // Retrieve public key
-// const ipfsPubkey = getPubkeyFromCompressedPubkey(compressedPubkey);
-
-// // Verify token using public key which is hosted by IPFS
-// // Please use node grater than v10
-// verify(token, ipfsPubkey);
 
 console.log({
   User: JSON.stringify(user),

@@ -17,4 +17,12 @@ Please checkout 'set-ipfs-hash-to-registry' branch and refer to following blog p
 Blog Post: [Express uPort as javascript — Set IPFS hash to Registry Contract](https://medium.com/@t.tak/express-uport-as-javascript-set-ipfs-hash-to-registry-contract-600c2dbf8404)
 <br>
 
-![alt set-hash img inside of white paper](img/set-hash.png)
+![alt set-hash img inside of white paper](img/set-hash.png)<br>
+
+## Relay transaction to 3rd party Dapp
+Please checkout 'relay-tx-to-3rdparty-dapp' branch and refer to following blog post for further information.<br>
+
+Blog Post: [Express uPort as javascript - Relay transaction to 3rd party Dapp](https://medium.com/@t.tak/express-uport-as-javascript-relay-transaction-to-3rd-party-dapp-12fd226acc2f)
+<br>
+
+![alt relay-tx img inside of white paper](img/relay-tx.png)

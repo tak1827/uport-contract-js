@@ -19,14 +19,14 @@ class TxRelay {
     listOwner
   ) {
 
-    Assert(listOwner === '' ||
-      this.whitelist[listOwner][msg.sender],
+    Assert(listOwner === '' || this.whitelist[listOwner][msg.sender],
       `Not allowed listOwner: ${listOwner}`
     )
 
+    // Get claimedSender property of data
     const claimedSender = this.getAddress(data);
 
-    // use EIP 191
+    // EIP 191
     // 0x19 :: version :: relay :: whitelistOwner :: 
     // nonce :: destination :: data
     const h = calculateEIP191Hash(
@@ -36,15 +36,18 @@ class TxRelay {
       JSON.stringify(data)
     )
 
+    // Recover public key from signature
     const addressFromSig = ecrecover(
       h, sigV, sigR, sigS, 1).toString('hex');
 
+    // Verify signature
     Assert(claimedSender === addressFromSig,
       `claimedSender don't correspond to addressFromSig`
     )
 
     setSender(this.address);// Set sunder as TxRelay
 
+    // Increment nonce
     this.nonce[claimedSender]++;
     
     // Specify forwardTo for simplification

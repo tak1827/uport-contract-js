@@ -36,7 +36,7 @@ class MetaIdentityManager {
   }
 
   forwardTo(sender, identity, className, methodName, data) {
-    this.onlyAuthorized();
+    this.onlyAuthorized();// Only accept tx from txRelay
     this.onlyOwner(identity, sender);
 
     setSender(this.address);// Set sender as IdentityManager
