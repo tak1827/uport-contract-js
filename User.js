@@ -3,6 +3,7 @@ class User {
     this.name = name;
     this.proxy = null;
     this.jwtKey = null;
+    this.txRelayKey = null;
     this.subjects = [];
     assignAddress.call(this); // Assign address property
   }

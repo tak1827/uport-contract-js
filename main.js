@@ -1,10 +1,13 @@
+const { randomBytes } = require('crypto');
+const { ecsign, privateToPublic } = require('ethereumjs-util');
 const Proxy = require('./contracts/Proxy');
-const IdentityManager = require('./contracts/IdentityManager');
-const UportRegistry = require('./contracts/UportRegistry');
+const MetaIdentityManager = require('./contracts/MetaIdentityManager');
+const ThirdPartyDapp = require('./contracts/ThirdPartyDapp');
 const { IPFS, buildAttestation, decodeBase64 } = require('./IPFS');
 const { generatePrivateKey, getPubkey, getCompressedPubkey, getPubkeyFromCompressedPubkey,
   sign, verify, buildPayload } = require('./JWT');
 const User = require('./User');
+const { TxRelay, calculateEIP191Hash } = require('./contracts/TxRelay');
 
 
 /********************************
@@ -33,8 +36,9 @@ global.setSender = function (sender) {
 }
 
 // Deploy contracts
-global.IM = new IdentityManager(10);
-global.UR = new UportRegistry();
+global.TR = new TxRelay();
+global.MIM = new MetaIdentityManager(10, TR.address);
+global.TD = new ThirdPartyDapp();// Contents is same as UportRegistry
 
 // Pseudo IPFS
 global.IS = new IPFS();
@@ -58,7 +62,7 @@ let user = new User("Christian Lundkvist");
 user.run(function() {
 
   // Proxy contract is deployed by IdentityManager
-  this.proxy = IM.createIdentity(this.address);
+  this.proxy = MIM.createIdentity(this.address);
 });
 
 
@@ -67,10 +71,10 @@ user.run(function() {
  */
 
 // Define unique subject
-user.subjects.push('First-JWT');
+user.subjects.push('Second-JWT');
 
 const payload = buildPayload(
-  { name: user.name, identifier: IM.address }, 
+  { name: user.name, identifier: MIM.address }, 
   user.subjects[0], 
   user.proxy.address,
 );
@@ -98,20 +102,71 @@ const hash = IS.add( JSON.stringify(attestation) );
 /*
  5. Register IPFS hash to UportRegistry contract
  */
+// user.run(function() {
+
+//   // IdentityManager delegate registration to Proxy
+//   // Proxy register hash to UportRegistry
+//   MIM.forwardTo(
+//     this.proxy, 
+//     'UportRegistry',
+//     'set',
+//     { 
+//       identifier: MIM.address,
+//       subject: user.subjects[0],
+//       value: hash
+//     }
+//   );
+// });
+
+
+/*
+ 5. Create signature for txRelay
+ */
+
+// Generate private key for txRelay 
+user.txRelayKey = randomBytes(32);
+
+// Empty becasue Tx sender is owner.
+// User can delegate another user as sender.
+const listOwner = '';
+
+// Retreve pub key and set as sender
+const claimedSender = privateToPublic(user.txRelayKey).toString('hex');
+
+// Nonce is for preventing from replay attack.
+const nonce = TR.getNonce(claimedSender);
+
+// Data to sign
+const data = { 
+  claimedSender,
+  sender: user.address,
+  identity: user.proxy,
+  className: 'ThirdPartyDapp',
+  methodName: 'set',
+  data: {
+    identifier: MIM.address,
+    subject: user.subjects[0],
+    value: hash
+  }
+};
+
+// Calculate hash
+const eip191Hash = calculateEIP191Hash(
+  listOwner, nonce, MIM.address, JSON.stringify(data)
+)
+
+const sig = ecsign(eip191Hash, user.txRelayKey, 1);
+
+
+/*
+ 6. Relay transaction
+ */
 user.run(function() {
 
-  // IdentityManager delegate registration to Proxy
-  // Proxy register hash to UportRegistry
-  IM.forwardTo(
-    this.proxy, 
-    'UportRegistry',
-    'set',
-    { 
-      identifier: IM.address,
-      subject: user.subjects[0],
-      value: hash
-    }
-  );
+  // Send tx to relayMetaTx of txRelay contract
+  TR.relayMetaTx(
+    sig.v, sig.r, sig.s, MIM, data, listOwner
+  )
 });
 
 
@@ -119,31 +174,32 @@ user.run(function() {
  6. Verify JWT by a third party
  */
 
-// Decode token, then retrieve payload
-const decodedPayload = JSON.parse( decodeBase64(token.split(".")[1]) );
+// // Decode token, then retrieve payload
+// const decodedPayload = JSON.parse( decodeBase64(token.split(".")[1]) );
 
-// Get IPFS hash from UportRegistry
-const ipfsHash = UR.get(
-  decodedPayload.attribute.identifier,
-  decodedPayload.iss,
-  decodedPayload.sub
-);
+// // Get IPFS hash from UportRegistry
+// const ipfsHash = UR.get(
+//   decodedPayload.attribute.identifier,
+//   decodedPayload.iss,
+//   decodedPayload.sub
+// );
 
-// Get attestation from IPFS
-const ipfsAtt = IS.cat(ipfsHash);
+// // Get attestation from IPFS
+// const ipfsAtt = IS.cat(ipfsHash);
 
-// Retrieve compressed public key form attestation
-const compressedPubkey = JSON.parse(ipfsAtt).publicKey;
+// // Retrieve compressed public key form attestation
+// const compressedPubkey = JSON.parse(ipfsAtt).publicKey;
 
-// Retrieve public key
-const ipfsPubkey = getPubkeyFromCompressedPubkey(compressedPubkey);
+// // Retrieve public key
+// const ipfsPubkey = getPubkeyFromCompressedPubkey(compressedPubkey);
 
-// Verify token using public key which is hosted by IPFS
-verify(token, ipfsPubkey);
+// // Verify token using public key which is hosted by IPFS
+// // Please use node grater than v10
+// verify(token, ipfsPubkey);
 
 console.log({
   User: JSON.stringify(user),
-  IM: JSON.stringify(IM),
-  UR: JSON.stringify(UR),
+  MIM: JSON.stringify(MIM),
   IS: JSON.stringify(IS),
+  TD: JSON.stringify(TD)
 })

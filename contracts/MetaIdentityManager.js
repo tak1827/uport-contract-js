@@ -1,17 +1,24 @@
 const Assert = require('assert');
 const Proxy = require('./Proxy');
 
-class IdentityManager {
+class MetaIdentityManager {
 
-  onlyOwner(identity) {
-    Assert(this.isOwner(identity, msg.sender),
-      `Invalid owner: ${msg.sender}`
+  onlyAuthorized() {
+    Assert(msg.sender === this.relay,
+      `No authorication msg.sender: ${msg.sender}`
     );
   }
 
-  constructor(timeLock) {
+  onlyOwner(identity, sender) {
+    Assert(this.isOwner(identity, sender),
+      `Invalid owner: ${sender}`
+    );
+  }
+
+  constructor(timeLock, relay) {
     this.timeLock = timeLock;
     this.owners = {};
+    this.relay = relay;
     assignAddress.call(this); // Assign address property
   }
 
@@ -28,8 +35,9 @@ class IdentityManager {
     return identity;
   }
 
-  forwardTo(identity, className, methodName, data) {
-    this.onlyOwner(identity);
+  forwardTo(sender, identity, className, methodName, data) {
+    this.onlyAuthorized();
+    this.onlyOwner(identity, sender);
 
     setSender(this.address);// Set sender as IdentityManager
 
@@ -41,9 +49,10 @@ class IdentityManager {
 
   isOwner(identity, owner) {
     const now = (new Date()).getTime();
+    
     return (this.owners[identity.address][owner] > 0 && 
       (this.owners[identity.address][owner] + this.timeLock) <= now);
   }
 }
 
-module.exports = IdentityManager;
+module.exports = MetaIdentityManager;

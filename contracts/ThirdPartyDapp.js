@@ -1,4 +1,4 @@
-class UportRegistry {
+class ThirdPartyDapp {
 
   constructor() {
     this.registry = {};
@@ -23,4 +23,4 @@ class UportRegistry {
   }
 }
 
-module.exports = UportRegistry;
+module.exports = ThirdPartyDapp;
